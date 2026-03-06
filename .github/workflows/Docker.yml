@@ -33,28 +33,26 @@ jobs:
         
       - name: 下载二进制文件
         run: |
-          mkdir -p /opt/vnt
-          cd /opt/vnt
           wget -c https://github.com/vnt-dev/vnt/releases/download/${{ env.tags }}/vnt2-x86_64-unknown-linux-musl-${{ env.tags }}.zip -P /opt/
-          unzip -jo /opt/vnt2-x86_64-unknown-linux-musl-${{ env.tags }}.zip -d /opt/vnt/
+          unzip -jo /opt/vnt2-x86_64-unknown-linux-musl-${{ env.tags }}.zip -d .
           chmod a+x vnt2_web vnt2_ctrl
           mv vnt2_web vnt2_web_amd64
           mv vnt2_ctrl vnt2_ctrl_amd64
 
           wget -c https://github.com/vnt-dev/vnt/releases/download/${{ env.tags }}/vnt2-aarch64-unknown-linux-musl-${{ env.tags }}.zip -P /opt/
-          unzip -jo /opt/vnt2-aarch64-unknown-linux-musl-${{ env.tags }}.zip -d /opt/vnt/
+          unzip -jo /opt/vnt2-aarch64-unknown-linux-musl-${{ env.tags }}.zip -d .
           chmod a+x vnt2_web vnt2_ctrl
           mv vnt2_web vnt2_web_arm64
           mv vnt2_ctrl vnt2_ctrl_arm64
           
           wget -c https://github.com/vnt-dev/vnt/releases/download/${{ env.tags }}/vnt2-armv7-unknown-linux-musleabi-${{ env.tags }}.zip -P /opt/
-          unzip -jo /opt/vnt2-armv7-unknown-linux-musleabi-${{ env.tags }}.zip -d /opt/vnt/
+          unzip -jo /opt/vnt2-armv7-unknown-linux-musleabi-${{ env.tags }}.zip -d .
           chmod a+x vnt2_web vnt2_ctrl
           mv vnt2_web vnt2_web_armv7
           mv vnt2_ctrl vnt2_ctrl_armv7
 
           wget -c https://github.com/vnt-dev/vnt/releases/download/${{ env.tags }}/vnt2-arm-unknown-linux-musleabi-${{ env.tags }}.zip -P /opt/
-          unzip -jo /opt/vnt2-arm-unknown-linux-musleabi-${{ env.tags }}.zip -d /opt/vnt/
+          unzip -jo /opt/vnt2-arm-unknown-linux-musleabi-${{ env.tags }}.zip -d .
           chmod a+x vnt2_web vnt2_ctrl
           mv vnt2_web vnt2_web_armv6
           mv vnt2_ctrl vnt2_ctrl_armv6
