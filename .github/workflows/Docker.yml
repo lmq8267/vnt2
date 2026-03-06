@@ -1,0 +1,137 @@
+name: 打包docker镜像
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '请填写打包镜像的版本号，在vnt-dev/vnt的Releases页面查看已发布的版本号'
+        required: true
+        default: ''
+      latest:
+        description: '是否打包成最新latest镜像'
+        required: true
+        default: true
+        type: boolean
+      rel:
+        description: '是否发布离线镜像包'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  tags: "${{ github.event.inputs.tag }}"
+
+permissions:
+  contents: write
+  packages: write  # 允许写入 GitHub Container Registry (GHCR)
+jobs:
+ build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+        
+      - name: 下载二进制文件
+        run: |
+          mkdir -p /opt/vnt
+          cd /opt/vnt
+          wget -c https://github.com/vnt-dev/vnt/releases/download/${{ env.tags }}/vnt2-x86_64-unknown-linux-musl-${{ env.tags }}.zip -P /opt/
+          unzip -jo /opt/vnt2-x86_64-unknown-linux-musl-${{ env.tags }}.zip -d /opt/vnt/
+          chmod a+x vnt2_web vnt2_ctrl
+          mv vnt2_web vnt2_web_amd64
+          mv vnt2_ctrl vnt2_ctrl_amd64
+
+          wget -c https://github.com/vnt-dev/vnt/releases/download/${{ env.tags }}/vnt2-aarch64-unknown-linux-musl-${{ env.tags }}.zip -P /opt/
+          unzip -jo /opt/vnt2-aarch64-unknown-linux-musl-${{ env.tags }}.zip -d /opt/vnt/
+          chmod a+x vnt2_web vnt2_ctrl
+          mv vnt2_web vnt2_web_arm64
+          mv vnt2_ctrl vnt2_ctrl_arm64
+          
+          wget -c https://github.com/vnt-dev/vnt/releases/download/${{ env.tags }}/vnt2-armv7-unknown-linux-musleabi-${{ env.tags }}.zip -P /opt/
+          unzip -jo /opt/vnt2-armv7-unknown-linux-musleabi-${{ env.tags }}.zip -d /opt/vnt/
+          chmod a+x vnt2_web vnt2_ctrl
+          mv vnt2_web vnt2_web_armv7
+          mv vnt2_ctrl vnt2_ctrl_armv7
+
+          wget -c https://github.com/vnt-dev/vnt/releases/download/${{ env.tags }}/vnt2-arm-unknown-linux-musleabi-${{ env.tags }}.zip -P /opt/
+          unzip -jo /opt/vnt2-arm-unknown-linux-musleabi-${{ env.tags }}.zip -d /opt/vnt/
+          chmod a+x vnt2_web vnt2_ctrl
+          mv vnt2_web vnt2_web_armv6
+          mv vnt2_ctrl vnt2_ctrl_armv6
+          
+      - name: Setup QEMU
+        uses: dbhi/qus/action@main
+        
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+         username: ${{ github.repository_owner }}
+         password: ${{ secrets.DOCKER_TOKEN }}
+         
+      - name: login github container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build and Push Docker Latest Image
+        if: github.event.inputs.latest == 'true'
+        uses: docker/build-push-action@v5
+        with:
+         push: true
+         tags: |
+          docker.io/${{ github.repository_owner }}/vnt2:${{ env.tags }}
+          docker.io/${{ github.repository_owner }}/vnt2:latest
+          ghcr.io/${{ github.actor }}/vnt2:${{ env.tags }}
+          ghcr.io/${{ github.actor }}/vnt2:latest
+         platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
+         context: .
+         
+      - name: Build and Push Docker Image
+        if: github.event.inputs.latest == 'false'
+        uses: docker/build-push-action@v5
+        with:
+         push: true
+         tags: |
+          docker.io/${{ github.repository_owner }}/vnt2:${{ env.tags }}
+          ghcr.io/${{ github.actor }}/vnt2:${{ env.tags }}
+         platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6
+         context: .
+         
+      - name: Save Docker Image
+        if: github.event.inputs.rel == 'true'
+        run: |
+          mkdir -p /opt/dk
+          docker pull --platform linux/amd64 ${{ github.repository_owner }}/vnt2:${{ env.tags }}
+          docker save -o /opt/dk/vnt2-x86_64-docker.tar ${{ github.repository_owner }}/vnt2:${{ env.tags }}
+
+          docker pull --platform linux/arm64 ${{ github.repository_owner }}/vnt2:${{ env.tags }}
+          docker save -o /opt/dk/vnt2-arm64-docker.tar ${{ github.repository_owner }}/vnt2:${{ env.tags }}
+
+          docker pull --platform linux/arm/v7 ${{ github.repository_owner }}/vnt2:${{ env.tags }}
+          docker save -o /opt/dk/vnt2-armv7-docker.tar ${{ github.repository_owner }}/vnt2:${{ env.tags }}
+
+          docker pull --platform linux/arm/v6 ${{ github.repository_owner }}/vnt2:${{ env.tags }}
+          docker save -o /opt/dk/vnt2-armv5-docker.tar ${{ github.repository_owner }}/vnt2:${{ env.tags }}
+          
+          echo "build_time=$(TZ=UTC-8 date '+%Y年%m月%d日%H:%M:%S' | jq -sRr @uri)" >> $GITHUB_ENV
+          
+      - name: 发布
+        if: github.event.inputs.rel == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+           > ![](https://img.shields.io/badge/%E7%BC%96%E8%AF%91%E6%97%B6%E9%97%B4-${{ env.build_time }}-8267?logo=github&labelColor=%E9%A1%BB)![](https://img.shields.io/github/downloads/${{ github.repository }}/${{ env.tags }}/total?label=%E4%B8%8B%E8%BD%BD%E6%AC%A1%E6%95%B0&logo=github)![](https://img.shields.io/docker/image-size/lmq8267/vnt/${{ env.tags }}?label=%E9%95%9C%E5%83%8F%E5%A4%A7%E5%B0%8F&link=https%3A%2F%2Fhub.docker.com%2Fr%2Flmq8267%2Fvnt&logo=docker)
+           
+           -docker.tar: 离线docker镜像包
+           
+           [官方更新说明](https://github.com/vnt-dev/vnt/releases)
+           
+          tag_name: ${{ env.tags }}
+          files: /opt/dk/*
+          
