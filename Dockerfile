@@ -4,14 +4,12 @@ ARG TARGETVARIANT
 
 # 添加程序
 ADD vnt2_web_$TARGETARCH$TARGETVARIANT /app/vnt2_web
-ADD vnt2_ctrl_$TARGETARCH$TARGETVARIANT /app/vnt2_ctrl
 
 RUN apk update && \
     apk add iptables-legacy && \ 
     ln -sf /usr/sbin/iptables-legacy /usr/sbin/iptables && \
     ln -sf /usr/sbin/ip6tables-legacy /usr/sbin/ip6tables \
-    ln -sf /app/vnt2_web /usr/sbin/vnt2_web \
-    ln -sf /app/vnt2_ctrl /usr/sbin/vnt2_ctrl
+    ln -sf /app/vnt2_web /usr/sbin/vnt2_web
     
 RUN apk add --no-cache tzdata && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
@@ -27,7 +25,7 @@ ENV LANGUAGE=zh_CN:zh
 ENV TZ=Asia/Shanghai
 
 # 设置程序为可执行
-RUN chmod +x /app/vnt2_web /app/vnt2_ctrl
+RUN chmod +x /app/vnt2_web
 
 # 挂载配置目录
 VOLUME /app/vnt_config
